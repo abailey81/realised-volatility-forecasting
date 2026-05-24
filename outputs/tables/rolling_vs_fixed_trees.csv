@@ -1,0 +1,7 @@
+ticker,model,fixed_ratio,rolling_ratio
+AAPL,RF,3.038,1.548
+AAPL,BG,7.314,2.56
+AMZN,RF,3.885,2.098
+AMZN,BG,6.719,2.978
+JPM,RF,5.274,2.526
+JPM,BG,13.835,4.558

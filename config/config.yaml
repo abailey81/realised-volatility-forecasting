@@ -1,0 +1,275 @@
+# =============================================================================
+# Configuration for the ML-for-realised-variance replication.
+#
+# All paths are relative to the project root. All parameters used by the
+# pipeline live here so the scripts under scripts/ remain thin entry points.
+#
+# Reference: Christensen, Siggaard, Veliyev (2023), JFE 21(5).
+# =============================================================================
+
+project:
+  name: "ML for Realised Variance Forecasting"
+  seed: 42
+  log_level: "INFO"
+
+paths:
+  data_raw: "data/raw"
+  data_intermediate: "data/intermediate"
+  data_features: "data/features"
+  data_macro: "data/macro"
+  outputs_tables: "outputs/tables"
+  outputs_figures: "outputs/figures"
+  outputs_results: "outputs/results"
+
+data:
+  stocks: ["AAPL", "AMZN", "JPM"]
+
+  # Trading session (NYSE regular hours, US/Eastern).
+  # The raw files contain bars in Eastern Time without DST adjustment.
+  session_open: "09:30"
+  session_close: "16:00"
+
+  # Realised variance sampling frequency.
+  # The paper uses 5-minute returns (n = 78 returns per day).
+  rv_sampling_minutes: 5
+
+  # Outlier filtering thresholds (Barndorff-Nielsen et al. 2009).
+  # Returns more than `outlier_sd` standard deviations from a local
+  # rolling median are flagged. Cap the per-return jump magnitude as well.
+  outlier_filter:
+    enabled: true
+    rolling_window_minutes: 50
+    sd_multiplier: 8.0
+    max_abs_log_return: 0.10
+
+  # Train / validation / test split. Default matches the paper's 70/10/20.
+  split:
+    train_frac: 0.70
+    val_frac: 0.10
+    test_frac: 0.20
+
+  # The "extended" feature set M_ALL per Table 1 of Christensen et al. (2023).
+  # `RVD`, `RVW`, `RVM` are always included (these are the M_HAR set).
+  # EA dates are fetched per-ticker via yfinance and cached at
+  # ``data/macro/earnings_dates.json``. DVOL is the first-difference of log
+  # dollar volume, built from daily volume sums aggregated in stage 1.
+  # IV is proxied by VIX (paper uses OptionMetrics model-free IV per stock).
+  extra_features:
+    - "IV"        # model-free implied volatility (proxied by VIX)
+    - "EA"        # earnings-announcement dummy (per ticker)
+    - "M1W"       # 1-week momentum
+    - "DVOL"      # log-difference of dollar trading volume
+    - "VIX"       # CBOE VIX
+    - "EPU"       # Economic Policy Uncertainty (Baker, Bloom & Davis)
+    - "HSI"       # Hang Seng daily squared log return
+    - "ADS"       # Aruoba-Diebold-Scotti business conditions index
+    - "US3M"      # US 3-month T-bill rate, first-differenced
+
+# -----------------------------------------------------------------------------
+# Forecast horizons.
+# Horizon 1 = next-day RV, the paper's main analysis.
+# Horizon 5 = next-week average RV. Horizon 22 = next-month average RV.
+# -----------------------------------------------------------------------------
+forecast:
+  horizons: [1, 5, 22]
+  rolling_window: true                # rolling re-estimation (HAR family)
+  refit_frequency_days: 1             # refit every day for OLS-based models
+
+# -----------------------------------------------------------------------------
+# HAR-family models. Each entry is a (label, class) pair recognised by
+# src.models.har_models.HARModelRegistry.
+# -----------------------------------------------------------------------------
+models_har:
+  - HAR
+  - LogHAR
+  - LevHAR
+  - SHAR
+  - HARQ
+
+# -----------------------------------------------------------------------------
+# Regularised linear models. Hyperparameter grids are searched on the
+# validation set (TimeSeriesSplit cross-validation is also implemented as a
+# robustness option in src/models/regularized.py).
+# -----------------------------------------------------------------------------
+models_regularized:
+  # Paper Appendix A.4 Table A.6: λ ∈ [10^-5, 10^2] (log scale, 1000-point grid)
+  # for Ridge / Lasso / ElasticNet. α ∈ [0, 1] (10-point grid) for ElasticNet.
+  # We use a 100-point grid for tractability — the optimum is empirically
+  # interior so denser sampling does not move the answer materially.
+  ridge:
+    alpha_grid_log10: [-5.0, 2.0]     # log10 bounds; expanded to 100-pt grid
+    alpha_grid_n: 100
+  lasso:
+    alpha_grid_log10: [-5.0, 2.0]
+    alpha_grid_n: 100
+  elastic_net:
+    alpha_grid_log10: [-5.0, 2.0]
+    alpha_grid_n: 100
+    l1_ratio_grid: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+  adaptive_lasso:
+    gamma: 1.0
+    alpha_grid_log10: [-5.0, 2.0]
+    alpha_grid_n: 100
+  post_lasso:
+    alpha_grid_log10: [-5.0, 2.0]
+    alpha_grid_n: 100
+
+# -----------------------------------------------------------------------------
+# Tree-based models. Per the paper, default hyperparameters are used for
+# Random Forest and Bagging, matching Breiman & Cutler (2004).
+# Gradient Boosting hyperparameters are tuned on the validation set.
+# -----------------------------------------------------------------------------
+models_trees:
+  bagging:
+    n_estimators: 500
+    bootstrap: true
+  random_forest:
+    n_estimators: 500
+    max_features: "sqrt"              # default for regression
+    bootstrap: true
+  gradient_boosting:
+    # Paper Appendix A.4 Table A.6:
+    # depth ∈ {1, 2}, trees ∈ {50, 100, ..., 500}, learning_rate ∈ {0.01, 0.1}
+    n_estimators_grid: [50, 100, 150, 200, 250, 300, 350, 400, 450, 500]
+    learning_rate_grid: [0.01, 0.1]
+    max_depth_grid: [1, 2]
+    subsample: 1.0                     # paper uses full sample, no subsampling
+
+# -----------------------------------------------------------------------------
+# Neural networks. Geometric pyramid architectures NN1 through NN4.
+# Each is trained with 100 random initialisations; the ensemble averages
+# the predictions from the 10 best-validation-MSE seeds (NN^{10} in the paper).
+# -----------------------------------------------------------------------------
+models_nn:
+  # Paper Appendix A.4-A.5 (Table A.6) prescribes: epochs=500, patience=100,
+  # dropout=0.8. The sklearn MLPRegressor backend has NO dropout, so early
+  # stopping is the ONLY available NN regulariser here. We therefore tighten
+  # the early-stopping regime (epochs 200, patience 25) to compensate for the
+  # missing dropout — training a dropout-free network to 500 epochs would tend
+  # to overfit, so stopping earlier substitutes for the regularisation dropout
+  # would have provided. This is a genuine deviation from the paper's NN regime
+  # (along with ReLU vs leaky-ReLU); the top-10-of-100 ensembling absorbs most
+  # of the per-seed sensitivity. NOTE: the 200-epoch cap is an *active* setting,
+  # not a no-op — a meaningful fraction of seeds train right up to it. See
+  # LIMITATIONS.md S3.4.
+  architectures:
+    NN1: [2]
+    NN2: [4, 2]
+    NN3: [8, 4, 2]
+    NN4: [16, 8, 4, 2]
+  activation: "leaky_relu"             # paper L-ReLU c=0.01 (PyTorch backend only)
+  leaky_relu_slope: 0.01
+  optimizer: "adam"
+  learning_rate: 0.001                 # paper-exact
+  batch_size: 64
+  epochs: 200                          # sklearn-tractable (paper: 500)
+  dropout: 0.1                         # sklearn no-op (paper: 0.8, PyTorch only)
+  early_stopping_patience: 25          # sklearn-tractable (paper: 100)
+  ensemble:
+    num_random_seeds: 100              # paper-exact
+    ensemble_top_k_options: [1, 10]    # paper reports NN^1 AND NN^10
+    ensemble_top_k: 10                 # primary headline ensemble
+  scheduler:
+    factor: 0.5
+    patience: 10
+  parallel:
+    n_jobs: 16
+
+# -----------------------------------------------------------------------------
+# Statistical tests.
+# -----------------------------------------------------------------------------
+diebold_mariano:
+  loss: "mse"                         # mse | mae | qlike
+  alternative: "less"                 # H1: comparison model has lower loss
+  hac_lag: null                       # null => Newey-West automatic
+
+mcs:
+  alpha: 0.10                         # 90% confidence level (paper default)
+  alpha_levels: [0.25, 0.10, 0.05]    # multi-level MCS reported in appendix
+  num_bootstrap: 10000                # paper uses 10,000
+  block_length: null                  # null => automatic per Politis-White
+  statistic: "Tmax"                   # Tmax | TR
+
+# -----------------------------------------------------------------------------
+# Accumulated Local Effects.
+# -----------------------------------------------------------------------------
+ale:
+  num_bins: 40
+  # ALE / VI features. Paper Figures 6-7 use the full 12-feature M_ALL set.
+  features:
+    - "RVD"
+    - "RVW"
+    - "RVM"
+    - "IV"
+    - "EA"
+    - "M1W"
+    - "DVOL"
+    - "VIX"
+    - "EPU"
+    - "HSI"
+    - "ADS"
+    - "US3M"
+  # Paper reports VI for HAR-X, LogHAR, LevHAR, SHAR, HARQ, RR, LA, A-LA, P-LA,
+  # BG, GB, EN, RF, NN_1^10, NN_2^10. We cover the headline subset.
+  models: ["HAR-X", "LogHAR", "EN", "LA", "P-LA", "RF", "GB", "NN2_ensemble", "NN4_ensemble"]
+  stock_for_plots: "AAPL"
+
+# -----------------------------------------------------------------------------
+# Robustness / extensions.
+# -----------------------------------------------------------------------------
+robustness:
+  train_window_sizes_days: [1000, 2000, 2964]
+  validation_size_days: 200
+
+extensions:
+  covid_subperiod:
+    enabled: true
+    pre_covid_end: "2020-02-28"
+    covid_start: "2020-03-01"
+    covid_end: "2021-12-31"
+    post_covid_start: "2022-01-01"
+
+# -----------------------------------------------------------------------------
+# Realised kernel (Barndorff-Nielsen, Hansen, Lunde & Shephard 2008).
+# -----------------------------------------------------------------------------
+realised_kernel:
+  enabled: true                       # toggle the RK pipeline in stage 1
+  sampling_minutes: 1                 # RK works best at 1-min frequency
+  kernel: "parzen"                    # "parzen" (Bandi-Russell c* = 3.5134)
+  c_star: 3.5134
+  use_for_features: false             # if true, RK replaces RV in feature engineering
+
+# -----------------------------------------------------------------------------
+# Mincer-Zarnowitz forecast-efficiency tests.
+# -----------------------------------------------------------------------------
+mincer_zarnowitz:
+  enabled: true
+  hac_lag: null                       # null => Newey-West automatic
+  include_theil_decomposition: true   # adds bias/regression/disturbance columns
+
+# -----------------------------------------------------------------------------
+# Forecast combinations.
+# -----------------------------------------------------------------------------
+combinations:
+  enabled: true
+  methods: ["simple_average", "mse_weighted", "bates_granger"]
+  bates_granger:
+    constrain_nonneg: true
+    shrinkage: 0.0
+  # Which models go into the combination pool. Tree methods and NNs are
+  # typically the most decorrelated set; including HAR adds an "anchor".
+  pool:
+    - "EN"
+    - "RF"
+    - "GB"
+    - "NN2_ensemble"
+    - "NN4_ensemble"
+
+# -----------------------------------------------------------------------------
+# Bootstrap confidence intervals for MSE.
+# -----------------------------------------------------------------------------
+bootstrap:
+  enabled: true
+  num_bootstrap: 10000                # paper-comparable bootstrap budget
+  block_length: null                  # null => n^(1/3)
+  alpha: 0.05                         # 95% CI

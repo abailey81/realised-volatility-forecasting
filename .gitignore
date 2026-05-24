@@ -1,0 +1,34 @@
+# Price/macro data and copyrighted material — not redistributed
+data/raw/
+data/intermediate/
+data/features/
+data/macro/
+papers/
+reference_materials/
+
+# Heavy generated artifacts (rebuilt by the pipeline)
+outputs/results/
+
+# Notebooks (scratch / exploratory)
+notebooks/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# Tooling / OS
+.vscode/
+.idea/
+.claude/
+.env
+.DS_Store
+*.DS_Store
+Thumbs.db
+
+# Results tables and figures ARE tracked — they are the empirical evidence.
