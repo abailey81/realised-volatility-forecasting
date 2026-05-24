@@ -45,7 +45,7 @@ fewer high-vol days at which ML's edge concentrates (see
 The realised kernel (BNHLS 2008) at 1-min sampling is implemented as a
 robustness extension (`src/data/realised_kernel.py`) and the JPM h=1
 result is disentangled into frequency vs estimator legs in
-`scripts/20_rk_frequency_disentangle.py`.
+`scripts/19_rk_frequency_disentangle.py`.
 
 ---
 
@@ -216,7 +216,7 @@ artifact that is now removed.
 multiplicity. With 22 models (21 contenders vs HAR baseline) × 3 stocks = 63 tests per horizon, the
 expected number of false rejections at α=0.05 under the null is ~3.
 We compute Bonferroni, Holm, and Benjamini-Hochberg corrections in
-`scripts/21_dm_multitest_correction.py` and report the inflation in
+`scripts/20_dm_multitest_correction.py` and report the inflation in
 `dm_multitest_*` tables. **Finding**: at h=1 and h=5, *zero* of 63
 DM cells survive any correction. At h=22, 4-6 cells survive Holm/BH.
 This is the strongest single critique of the paper's significance
@@ -245,16 +245,16 @@ claims, and is discussed in `CRITIQUE.md`.
 
 | Extension | Why | Where |
 |---|---|---|
-| Realised kernel at multiple frequencies | Paper compares 5-min RV only; RK at 1-min isolates the noise-robustness benefit | `src/data/realised_kernel.py`, `scripts/12_rk_robustness.py`, `scripts/20_rk_frequency_disentangle.py` |
+| Realised kernel at multiple frequencies | Paper compares 5-min RV only; RK at 1-min isolates the noise-robustness benefit | `src/data/realised_kernel.py`, `scripts/12_rk_robustness.py`, `scripts/19_rk_frequency_disentangle.py` |
 | Mincer-Zarnowitz forecast efficiency | MSE compares squared errors; MZ tests whether the forecast is unbiased and efficient (a stronger property) | `src/evaluation/mincer_zarnowitz.py`, `mz_h*_*.csv` |
 | Bootstrap CIs on losses and ratios | Headline MSE numbers without CIs invite over-interpretation of small gaps | `src/evaluation/bootstrap.py`, `bootstrap_ci_h*_*.csv` |
-| Path decomposition + CIs | Splits the M_HAR→M_ALL gain into HAR-X overfit / EN regularisation / RF tree / NN deep marginal | `scripts/18_critique_evidence.py`, `scripts/22_path_decomposition_ci.py` |
+| Path decomposition + CIs | Splits the M_HAR→M_ALL gain into HAR-X overfit / EN regularisation / RF tree / NN deep marginal | `scripts/18_critique_evidence.py`, `scripts/21_path_decomposition_ci.py` |
 | COVID custom-split (train 2016-2019, test 2020-2024) | Tests whether the ML edge survives a regime shift | `scripts/10_covid_custom_split.py`, `scripts/14_covid_outputs.py` |
 | Training-size sensitivity (800, 1200, 1500 days) | Paper uses one fixed split; sensitivity reveals how much ML benefits from sample size | `scripts/16_training_sensitivity.py` |
 | Decile-stratified loss (Figure 5 analogue) | Concentrates the comparison on the few days that matter for risk management | `src/evaluation/decile.py`, `scripts/15_decile_var_analysis.py` |
 | FHS Value-at-Risk backtest + Kupiec + Christoffersen | Translates MSE-superiority into a financial-decision metric | `src/evaluation/value_at_risk.py` |
-| Multi-testing correction | Honest interpretation of the paper's many pairwise DM tests | `scripts/21_dm_multitest_correction.py` |
-| HMM regime-conditional MSE | Asks where the ML gain lives (low- vs high-vol regimes) | `src/evaluation/regime.py`, `scripts/23_hmm_regime_analysis.py` |
+| Multi-testing correction | Honest interpretation of the paper's many pairwise DM tests | `scripts/20_dm_multitest_correction.py` |
+| HMM regime-conditional MSE | Asks where the ML gain lives (low- vs high-vol regimes) | `src/evaluation/regime.py`, `scripts/22_hmm_regime_analysis.py` |
 
 ---
 

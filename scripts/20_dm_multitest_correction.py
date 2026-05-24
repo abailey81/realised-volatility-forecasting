@@ -19,7 +19,7 @@ been called "significant" under naive nominal α=0.05 vs the corrected
 threshold.
 
 Usage:
-    python scripts/21_dm_multitest_correction.py
+    python scripts/20_dm_multitest_correction.py
 """
 
 from __future__ import annotations

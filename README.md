@@ -1,6 +1,6 @@
 # Realised-variance forecasting: HAR vs machine learning
 
-![python](https://img.shields.io/badge/python-3.13-blue)
+![python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
 ![tests](https://img.shields.io/badge/tests-37%20passing-brightgreen)
 

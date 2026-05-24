@@ -52,8 +52,8 @@ Outputs
 
 Usage
 -----
-    python scripts/24_treeshap_vs_ale.py
-    python scripts/24_treeshap_vs_ale.py --horizons 1 --stocks AAPL
+    python scripts/23_treeshap_vs_ale.py
+    python scripts/23_treeshap_vs_ale.py --horizons 1 --stocks AAPL
 """
 
 from __future__ import annotations

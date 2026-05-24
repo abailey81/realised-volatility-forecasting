@@ -25,7 +25,7 @@ Comparing the four MSE columns lets us decompose:
 * (RK-1m vs RK-5m): how the kernel benefits from higher frequency input.
 
 Usage:
-    python scripts/20_rk_frequency_disentangle.py
+    python scripts/19_rk_frequency_disentangle.py
 """
 
 from __future__ import annotations

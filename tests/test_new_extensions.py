@@ -2,8 +2,8 @@
 Unit tests for the newest extension modules added to the project:
 
 * HMM 2-state regime fitting (src.evaluation.regime)
-* Multi-testing correction primitives (scripts/21_dm_multitest_correction)
-* Path-decomposition bootstrap ratio CI (scripts/22_path_decomposition_ci)
+* Multi-testing correction primitives (scripts/20_dm_multitest_correction)
+* Path-decomposition bootstrap ratio CI (scripts/21_path_decomposition_ci)
 
 These tests verify mathematical properties rather than exact numerical
 output: the regime fit recovers the planted high-/low-vol regimes, the
@@ -130,7 +130,7 @@ def test_regime_conditional_losses_partitions_test_set():
 # ---------------------------------------------------------------------------
 
 def test_bonferroni_holm_bh_monotone_in_threshold():
-    mod = _import_script("21_dm_multitest_correction.py")
+    mod = _import_script("20_dm_multitest_correction.py")
     rng = np.random.default_rng(0)
     pvals = rng.uniform(0, 1, size=200)
     pvals[:10] = 0.001  # plant some clear rejections
@@ -144,14 +144,14 @@ def test_bonferroni_holm_bh_monotone_in_threshold():
 
 
 def test_bonferroni_at_zero_alpha_rejects_none():
-    mod = _import_script("21_dm_multitest_correction.py")
+    mod = _import_script("20_dm_multitest_correction.py")
     pvals = np.array([0.0001, 0.0005, 0.01])
     out = mod._bonferroni(pvals, 0.0)
     assert out.sum() == 0
 
 
 def test_bh_at_alpha_one_rejects_all_valid():
-    mod = _import_script("21_dm_multitest_correction.py")
+    mod = _import_script("20_dm_multitest_correction.py")
     pvals = np.array([0.1, 0.2, 0.3, np.nan])
     out = mod._bh(pvals, 1.0)
     assert out[:3].all()
@@ -159,7 +159,7 @@ def test_bh_at_alpha_one_rejects_all_valid():
 
 
 def test_holm_handles_nan_inputs():
-    mod = _import_script("21_dm_multitest_correction.py")
+    mod = _import_script("20_dm_multitest_correction.py")
     pvals = np.array([np.nan, 0.001, np.nan, 0.5])
     out = mod._holm(pvals, 0.05)
     # Only valid p-values can be rejected
@@ -173,7 +173,7 @@ def test_holm_handles_nan_inputs():
 # ---------------------------------------------------------------------------
 
 def test_bootstrap_ratio_brackets_point_estimate():
-    mod = _import_script("22_path_decomposition_ci.py")
+    mod = _import_script("21_path_decomposition_ci.py")
     rng = np.random.default_rng(0)
     # Numerator/denominator with a known ratio of 0.5
     num = rng.exponential(0.5, size=300)
@@ -187,7 +187,7 @@ def test_bootstrap_ratio_brackets_point_estimate():
 
 
 def test_bootstrap_ratio_zero_denominator_is_robust():
-    mod = _import_script("22_path_decomposition_ci.py")
+    mod = _import_script("21_path_decomposition_ci.py")
     rng = np.random.default_rng(0)
     num = rng.exponential(1.0, size=100)
     den = np.full_like(num, 1e-12)   # essentially zero

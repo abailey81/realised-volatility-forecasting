@@ -14,8 +14,8 @@ rebuilds the forest. GB hyperparameters are selected ONCE on the initial
 "rolling without re-tuning" spirit) to keep the cost feasible.
 
 Usage:
-    python scripts/25_rolling_trees.py --stocks AAPL --horizons 22   # test cell
-    python scripts/25_rolling_trees.py                                # full run
+    python scripts/24_rolling_trees.py --stocks AAPL --horizons 22   # test cell
+    python scripts/24_rolling_trees.py                                # full run
 """
 from __future__ import annotations
 

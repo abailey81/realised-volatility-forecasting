@@ -19,7 +19,7 @@ Block bootstrap is used because daily MSE losses are autocorrelated;
 the Politis-White (2004) rule n^(1/3) gives ~7 days at our sample size.
 
 Usage:
-    python scripts/22_path_decomposition_ci.py
+    python scripts/21_path_decomposition_ci.py
 """
 
 from __future__ import annotations

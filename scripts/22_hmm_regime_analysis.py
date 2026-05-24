@@ -27,8 +27,8 @@ Outputs
 
 Usage
 -----
-    python scripts/23_hmm_regime_analysis.py
-    python scripts/23_hmm_regime_analysis.py --horizons 1 5 --losses mse
+    python scripts/22_hmm_regime_analysis.py
+    python scripts/22_hmm_regime_analysis.py --horizons 1 5 --losses mse
 """
 
 from __future__ import annotations

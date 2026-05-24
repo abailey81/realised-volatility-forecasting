@@ -488,7 +488,7 @@ For a family of m DM tests at nominal level α:
 * **Benjamini-Hochberg**: order p_(1) ≤ … ≤ p_(m), reject p_(i) if
   there exists k ≤ i with p_(k) ≤ (k/m)·α. Controls FDR.
 
-Implemented in `scripts/21_dm_multitest_correction.py`. The paper does
+Implemented in `scripts/20_dm_multitest_correction.py`. The paper does
 *not* perform any correction.
 
 ### 8.3 Model Confidence Set (Hansen-Lunde-Nason 2011)
@@ -579,7 +579,7 @@ Block length defaults to `b = max(1, round(n^(1/3)))` (Politis-White
 2004). For ratios of means (in the path decomposition CIs), we
 bootstrap numerator and denominator under the same block-index draw
 and report `mean(num*) / mean(den*)`. Implemented in
-`src/evaluation/bootstrap.py` and `scripts/22_path_decomposition_ci.py`.
+`src/evaluation/bootstrap.py` and `scripts/21_path_decomposition_ci.py`.
 
 ### 8.7 Filtered Historical Simulation VaR (extension)
 
@@ -614,7 +614,7 @@ back-transformed to the original log-RV scale. The regime label for
 each day is the argmax of the smoothed marginal probability. We then
 compute model-conditional MSE in {low-vol, high-vol} separately.
 Implemented in `src/evaluation/regime.py` and
-`scripts/23_hmm_regime_analysis.py`.
+`scripts/22_hmm_regime_analysis.py`.
 
 ---
 
