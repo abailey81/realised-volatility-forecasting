@@ -88,7 +88,8 @@ s.append(Paragraph("d_i=Lbar-Lbar.mean(); t=d_i/sd; boot_t=(boot_d-d_i)/sd<br/>"
 s.append(Paragraph("A6. Data &amp; disclosed deviations", H))
 s.append(Paragraph("5-min RV within-day (no overnight), BNHLS outlier filter, RV/RV±/RQ; 70/10/20 chronological split. "
   "Deviations: sklearn NN (ReLU, no dropout; early stopping in dropout's place); regularised+trees fixed-window "
-  "(HAR &amp; NN match CSV); IV proxied by VIX; 100-point λ grid. 37 unit tests pass; "
+  "(HAR &amp; NN match CSV); IV proxied by VIX; 100-point λ grid (resolution immaterial, but several selected "
+  "penalties sit at a grid bound — see selected_lambda.csv). 37 unit tests pass; "
   "<font face='Courier'>python scripts/00_run_full_pipeline.py</font>.", B))
 
 _board = ROOT/"outputs/figures/appendix_evidence_board.png"

@@ -67,8 +67,9 @@ story.append(P("<b>Data.</b> From 1-minute bars we keep the 09:30–16:00 sessio
   "RV<sub>t-1</sub> predicts RV<sub>t</sub> (a true one-step forecast)."))
 story.append(P("<b>Models.</b> All 22 CSV models sit behind one interface. HAR is closed-form OLS; LogHAR carries "
   "the Jensen back-transform; HARQ uses the Bollerslev–Patton–Quaedvlieg (2016) insanity filter (clip to the "
-  "in-sample range). Regularised models use a 100-point log-λ grid (CSV 1,000; the optimum is interior, so this "
-  "is immaterial). Bagging/RF use Breiman–Cutler defaults; gradient boosting is validation-tuned. Following CSV "
+  "in-sample range). Regularised models use a 100-point log-λ grid (CSV 1,000); the resolution is immaterial, but the "
+  "selected λ often sits at a grid bound (Ridge at the upper bound on all three stocks; see selected_lambda.csv), so the "
+  "grid range, not its density, binds. Bagging/RF use Breiman–Cutler defaults; gradient boosting is validation-tuned. Following CSV "
   "(p.1691) any negative variance forecast is replaced by the in-sample minimum RV, applied uniformly."))
 story.append(P("<b>Honest deviations.</b> The NNs run on scikit-learn (PyTorch unavailable): ReLU not leaky-ReLU and "
   "no dropout, so early stopping is the regulariser in dropout's place. For tractability the regularised, tree and "
