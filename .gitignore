@@ -8,6 +8,8 @@ reference_materials/
 
 # Heavy generated artifacts (rebuilt by the pipeline)
 outputs/results/
+# Transient per-shard outputs from the parallel rolling-tree run
+outputs/tables/_rolling_parts/
 
 # Notebooks (scratch / exploratory)
 notebooks/

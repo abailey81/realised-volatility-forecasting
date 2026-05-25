@@ -76,6 +76,8 @@ def main() -> int:
     ap.add_argument("--stocks", nargs="*", default=None)
     ap.add_argument("--horizons", nargs="*", type=int, default=None)
     ap.add_argument("--refit-frequency", type=int, default=1)
+    ap.add_argument("--out", default="outputs/tables/rolling_vs_fixed_trees.csv",
+                    help="Output CSV path (give each cell its own file when parallelising).")
     args = ap.parse_args()
 
     cfg = load_config()
@@ -128,7 +130,8 @@ def main() -> int:
                           ticker, h, label, ratio, time.time() - t0)
 
     df = pd.DataFrame(rows)
-    out_path = Path("outputs/tables/rolling_vs_fixed_trees.csv")
+    out_path = Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     # Merge with the fixed-window ratios for a side-by-side table.
     df.to_csv(out_path, index=False)
     _LOG.info("Saved %s", out_path)
