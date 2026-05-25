@@ -26,6 +26,8 @@ for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
     os.environ.setdefault(_v, "1")
 
 import sys
+import json
+import pickle
 import time
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -179,24 +181,45 @@ def _run_cell(task: tuple) -> dict:
             "secs": round(time.time() - t0, 1)}
 
 
+N_WORKERS = int(os.environ.get("ROLL_WORKERS", "10"))   # 10 keeps memory well under 16 GB
+PARTIAL = Path("outputs/tables/_rolling_partial.csv")    # append per completed cell (resumable)
+GB_CACHE = Path("outputs/tables/_gb_params.pkl")         # cache tuning across restarts
+
+
 def main() -> int:
     t_start = time.time()
 
-    # 1. GB pre-tuned once per (stock, horizon), sequentially (cheap).
-    gb_params = {}
-    for s in STOCKS:
-        for h in HORIZONS:
-            gb_params[(s, h)] = _tune_gb(s, h)
-    _LOG.info("GB tuned for %d (stock,horizon) cells in %.0fs", len(gb_params), time.time() - t_start)
+    # 1. GB params: load from cache or tune once per (stock, horizon) and cache.
+    if GB_CACHE.exists():
+        with open(GB_CACHE, "rb") as fh:
+            gb_params = pickle.load(fh)
+        _LOG.info("loaded cached GB params (%d cells)", len(gb_params))
+    else:
+        gb_params = {}
+        for s in STOCKS:
+            for h in HORIZONS:
+                gb_params[(s, h)] = _tune_gb(s, h)
+        GB_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        with open(GB_CACHE, "wb") as fh:
+            pickle.dump(gb_params, fh)
+        _LOG.info("GB tuned for %d cells in %.0fs (cached)", len(gb_params), time.time() - t_start)
 
-    # 2. 27-cell task list; controlled process pool, inner n_jobs=1.
-    tasks = [(s, h, m, gb_params[(s, h)]) for s in STOCKS for h in HORIZONS for m in MODELS]
-    n_jobs = max(1, (os.cpu_count() or 2) - 1)
-    n_jobs = min(n_jobs, len(tasks))
-    _LOG.info("running %d cells on %d workers (inner n_jobs=1)", len(tasks), n_jobs)
+    # 2. Resume: skip cells already in the partial file.
+    done = set()
+    if PARTIAL.exists():
+        prev = pd.read_csv(PARTIAL)
+        done = {(r.stock, int(r.horizon), r.model) for r in prev.itertuples()}
+        _LOG.info("resuming: %d cells already done", len(done))
 
-    results = []
-    with ProcessPoolExecutor(max_workers=n_jobs) as ex:
+    tasks = [(s, h, m, gb_params[(s, h)]) for s in STOCKS for h in HORIZONS for m in MODELS
+             if (s, h, m) not in done]
+    n_jobs = max(1, min(N_WORKERS, len(tasks)))
+    _LOG.info("running %d remaining cells on %d workers (inner n_jobs=1, fresh worker/cell)", len(tasks), n_jobs)
+
+    n_done = len(done)
+    total = len(STOCKS) * len(HORIZONS) * len(MODELS)
+    # max_tasks_per_child=1 -> each cell gets a fresh process, so memory never accumulates.
+    with ProcessPoolExecutor(max_workers=n_jobs, max_tasks_per_child=1) as ex:
         futs = {ex.submit(_run_cell, t): t for t in tasks}
         for fut in as_completed(futs):
             t = futs[fut]
@@ -205,12 +228,15 @@ def main() -> int:
             except Exception as exc:  # report, don't paper over
                 _LOG.error("cell %s FAILED: %s", t[:3], exc)
                 continue
-            results.append(r)
+            # Persist immediately (main-process write -> no race).
+            hdr = not PARTIAL.exists()
+            pd.DataFrame([r]).to_csv(PARTIAL, mode="a", header=hdr, index=False)
+            n_done += 1
             _LOG.info("[%s h=%d] %s rolling ratio=%.3f (%.0fs)  [%d/%d]",
                       r["stock"], r["horizon"], r["model"], r["rolling_ratio"], r["secs"],
-                      len(results), len(tasks))
+                      n_done, total)
 
-    roll = pd.DataFrame(results)
+    roll = pd.read_csv(PARTIAL)
 
     # 3. Merge with the fixed-window ratios already in loss_ratio_h{h}_mse.csv.
     fixed_rows = []
