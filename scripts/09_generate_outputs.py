@@ -88,7 +88,13 @@ def main() -> int:
     # === Figure 1: RV time series ===
     try:
         rv_dict = {t: load_realised(t)["RV"] for t in cfg.data.stocks}
-        fig = plot_rv_time_series(rv_dict)
+        fig = plot_rv_time_series(
+            rv_dict, title="",
+            stress_window=("2020-01-01", "2024-12-31"),
+            stress_label="2020-2024 stress-evaluation window (Section 4)",
+            xlabel="Year", ylabel="Annualised realised volatility (%)",
+            linewidth=0.8, legend_loc="upper left",
+        )
         save_figure(fig, "rv_time_series.pdf")
     except Exception as exc:  # noqa: BLE001
         log.warning("RV figure failed: %s", exc)
