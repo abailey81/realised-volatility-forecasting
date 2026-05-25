@@ -467,7 +467,7 @@ DM = (1/√T) · (Σ d_t) / √(σ̂²_NW)
 ```
 
 where σ̂²_NW is the Newey-West HAC variance with automatic bandwidth
-selection (Newey-West 1994 rule). For our T = 449 we use the HLN
+selection (Newey-West 1994 rule). For our T = 442 we use the HLN
 small-sample correction (Harvey-Leybourne-Newbold 1997):
 
 ```
@@ -622,8 +622,8 @@ Implemented in `src/evaluation/regime.py` and
 
 ### 9.1 Split
 
-70 / 10 / 20 chronological. Sizes per stock at h=1, M_ALL: 1568 /
-224 / 449. Test-set window: ≈ 2023-04 to 2024-12.
+70 / 10 / 20 chronological. Sizes per stock at h=1, M_ALL: 1547 /
+221 / 442. Test-set window: ≈ 2023-04 to 2024-12.
 
 ### 9.2 Seeds
 

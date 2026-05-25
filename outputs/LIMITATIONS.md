@@ -90,7 +90,7 @@ LogHAR uses the Jensen-inequality correction at back-transform.
 | Batch size | 64 | Same |
 | Epochs | 500 | **200** — `config.yaml` `epochs: 200`. NOT a no-op: measured `n_iter_` shows a meaningful fraction of seeds train right up to the 200 cap (e.g. NN3 mean rises 144→257 when the cap is lifted to 500, and per-seed predictions differ). The tighter cap, with patience 25, is a deliberate **early-stopping regulariser to compensate for the absent dropout** (sklearn has none; the paper's dropout 0.8 is its primary NN regulariser). Training a dropout-free net to 500 epochs would tend to overfit. |
 | Dropout | 0.8 | **0 (no dropout)** — sklearn's `MLPRegressor` does not implement dropout. L2 weight decay defaults to `alpha=0.0001` (a much weaker regulariser). The `dropout: 0.1` key in `config.yaml` is preserved for the PyTorch backend; the active sklearn backend ignores it. |
-| Early stopping patience | 100 | **25** — `config/config.yaml:161` `early_stopping_patience: 25` (sklearn-tractable; with `tol=1e-6` and Adam, 25 epochs of no-improvement is sufficient on our 1568-row training set). |
+| Early stopping patience | 100 | **25** — `config/config.yaml:161` `early_stopping_patience: 25` (sklearn-tractable; with `tol=1e-6` and Adam, 25 epochs of no-improvement is sufficient on our 1547-row training set). |
 | Validation fraction | 10% | **15%** — `MLPRegressor` default `validation_fraction=0.15`. This is sklearn's internal early-stopping validation slice, distinct from the orchestrator's outer 10% val split used for top-10 ensemble ranking. |
 | Random seeds | 100 per architecture | Same |
 | Ensembling | Top-10 of 100 by val MSE | Both NN^1 (top-1) and NN^10 (top-10) are stored — paper reports only top-10 but the top-1 result lets us assess seed-variance sensitivity. |
@@ -171,8 +171,9 @@ simplification. Its main visible consequence is the catastrophic
 fixed-window tree performance at h=22 (see §3.3 / METHODOLOGY §6.2),
 which the paper avoids by rolling BG/RF.
 
-Test-set size: 449 days. The paper's per-stock test-set sizes are
-larger (≈856 days at h=1) because their sample is twice as long. With
+Test-set size: 442 days (439 at h=22). The paper's per-stock test-set
+sizes are larger (≈856 days at h=1) because their sample is twice as
+long. With
 fewer test-set observations our DM/MCS power is mechanically lower.
 
 ---

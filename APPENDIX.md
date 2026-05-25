@@ -1,6 +1,6 @@
 # Appendix (≤3 pages) — full results, robustness, and code
 
-All numbers are out-of-sample on the 2016–2024 test set (≈449 days), AAPL/AMZN/JPM.
+All numbers are out-of-sample on the 2016–2024 test set (442 days at h=1, 439 at h=22), AAPL/AMZN/JPM.
 Ratios are MSE relative to HAR; **< 1 beats HAR**. Full machine-readable tables are in `outputs/tables/`; the complete critique is in `CRITIQUE.md`.
 
 ## A1. Full 22-model out-of-sample MSE ratios vs HAR — M_ALL
