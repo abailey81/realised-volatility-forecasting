@@ -89,19 +89,50 @@ def plot_rv_time_series(
     rv_dict: Mapping[str, pd.Series],
     annualise: bool = True,
     title: str = "Daily realised volatility (annualised)",
+    stress_window: tuple | None = None,
+    stress_label: str | None = None,
+    xlabel: str = "Date",
+    ylabel: str | None = None,
+    linewidth: float = 0.9,
+    legend_loc: str | None = None,
 ) -> plt.Figure:
-    """Plot annualised daily realised volatility for one or more stocks."""
+    """Plot annualised daily realised volatility for one or more stocks.
+
+    The annualising transform is ``σ = sqrt(252 · RV) · 100`` — annualised
+    realised volatility in percent.
+
+    If ``stress_window=(start, end)`` is given, a light-grey ``axvspan`` is
+    shaded *behind* the lines (used for the 2020–2024 stress re-split, which is
+    distinct from the calm 70/10/20 chronological test tail). When
+    ``stress_label`` is supplied it is captioned just inside the top of the band.
+    """
     _setup_style()
     fig, ax = plt.subplots(figsize=(8.5, 3.4))
+
+    # Shaded stress window, drawn behind everything else.
+    if stress_window is not None:
+        x0, x1 = pd.Timestamp(stress_window[0]), pd.Timestamp(stress_window[1])
+        ax.axvspan(x0, x1, color="0.5", alpha=0.15, linewidth=0, zorder=0)
+
     for ticker, rv in rv_dict.items():
         sigma = np.sqrt(rv * 252) * 100 if annualise else rv
-        ax.plot(sigma.index, sigma.values, label=ticker, linewidth=0.9)
+        ax.plot(sigma.index, sigma.values, label=ticker, linewidth=linewidth, zorder=3)
+
     ax.set_title(title)
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Annualised σ (%)" if annualise else "RV")
-    ax.legend(ncol=len(rv_dict))
+    ax.set_xlabel(xlabel)
+    if ylabel is None:
+        ylabel = "Annualised σ (%)" if annualise else "RV"
+    ax.set_ylabel(ylabel)
+    ax.legend(ncol=len(rv_dict), loc=legend_loc or "best")
     if annualise:
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(decimals=0))
+
+    # Caption just inside the top of the shaded band.
+    if stress_window is not None and stress_label:
+        ax.text(pd.Timestamp(stress_window[0]), 0.97, "  " + stress_label,
+                transform=ax.get_xaxis_transform(), ha="left", va="top",
+                fontsize=7.5, color="0.30", zorder=4)
+
     fig.tight_layout()
     return fig
 

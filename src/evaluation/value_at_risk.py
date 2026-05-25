@@ -236,3 +236,77 @@ def var_table(
             except Exception:  # noqa: BLE001
                 continue
     return pd.DataFrame(rows)
+
+
+def expanding_quantile_fhs(
+    log_returns: pd.Series,
+    rv_forecasts: pd.Series,
+    train_end: pd.Timestamp,
+    alpha: float = 0.05,
+    rv_realised: pd.Series | None = None,
+    recalibrate_every: int = 1,
+) -> VaRResult:
+    """FHS-VaR with an *expanding* standardised-residual quantile.
+
+    Unlike :func:`filtered_historical_simulation`, which freezes the α-quantile
+    ``q_α`` on the in-sample (2016–2019) window, this recomputes ``q_α`` on an
+    expanding window that grows by each *realised* test day, recalibrating every
+    ``recalibrate_every`` test days. ``recalibrate_every=1`` (daily) satisfies
+    the "at least annually" requirement; pass ``~252`` for annual recalibration.
+
+    Standardisation is self-consistent with the VaR scaling: a test-day residual
+    is ``z_t = r_t / sqrt(rv_forecasts[t])`` — the *same* volatility that scales
+    ``VaR_t`` — so systematic forecast bias is absorbed into ``q_α`` and
+    unconditional coverage becomes valid by construction as the window fills.
+    The in-sample window seeds the pool with realised-RV-standardised residuals
+    (no in-sample forecast is available; cf. the fixed-quantile FHS docstring).
+
+    No look-ahead: ``VaR_t`` for test day ``t`` uses only residuals strictly
+    before ``t`` (the seed plus realised test days ``< t``).
+    """
+    if rv_realised is None:
+        rv_realised = rv_forecasts
+
+    # In-sample seed residuals, standardised by realised RV.
+    seed_idx = log_returns.index.intersection(rv_realised.index)
+    seed_idx = seed_idx[seed_idx <= train_end]
+    if len(seed_idx) < 50:
+        raise ValueError("Insufficient training history for FHS quantile")
+    sigma_seed = np.sqrt(np.maximum(rv_realised.loc[seed_idx].to_numpy(), 1e-12))
+    z_seed = log_returns.loc[seed_idx].to_numpy() / sigma_seed
+
+    # Out-of-sample test period, standardised by the forecast (self-consistent).
+    test_idx = log_returns.index.intersection(rv_forecasts.index)
+    test_idx = test_idx[test_idx > train_end]
+    if len(test_idx) == 0:
+        raise ValueError("No out-of-sample period after train_end")
+    r_test = log_returns.loc[test_idx].to_numpy()
+    sigma_test = np.sqrt(np.maximum(rv_forecasts.loc[test_idx].to_numpy(), 1e-12))
+    z_test = r_test / sigma_test
+
+    var_t = np.empty(len(test_idx))
+    q = float(np.quantile(z_seed, alpha))
+    for i in range(len(test_idx)):
+        if i % recalibrate_every == 0:
+            pool = np.concatenate([z_seed, z_test[:i]]) if i > 0 else z_seed
+            q = float(np.quantile(pool, alpha))
+        var_t[i] = q * sigma_test[i]
+
+    hits = (r_test <= var_t).astype(int)
+    qloss = _quantile_loss(r_test, var_t, alpha)
+    lr_unc, p_unc = _kupiec_unconditional(hits, alpha)
+    lr_joint, p_joint = _christoffersen_conditional(hits, alpha)
+
+    return VaRResult(
+        var_forecast=pd.Series(var_t, index=test_idx, name=f"VaR_{int(alpha*100):02d}"),
+        hits=pd.Series(hits, index=test_idx, name="hit"),
+        alpha=alpha,
+        quantile_loss=qloss,
+        kupiec_lr=lr_unc,
+        kupiec_pvalue=p_unc,
+        christoffersen_lr=lr_joint,
+        christoffersen_pvalue=p_joint,
+        expected_hits=float(alpha * len(test_idx)),
+        observed_hits=int(hits.sum()),
+        n=int(len(test_idx)),
+    )

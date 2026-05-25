@@ -81,4 +81,4 @@ pval  = np.mean(boot_t.max(axis=1) >= t_stat.max())      # eliminate argmax if p
 ```
 
 ## A6. Data, deviations, reproducibility (one line each)
-5-min RV within-day (no overnight), BNHLS outlier filter, RV/RV±/RQ; 70/10/20 chronological split. **Deviations (disclosed):** sklearn NN (ReLU, no dropout; early stopping in dropout's place); regularised + trees fixed-window (HAR & NN match CSV); IV proxied by VIX; 100-point λ grid. 37 unit tests pass. One command: `python scripts/00_run_full_pipeline.py`.
+5-min RV within-day (no overnight), BNHLS outlier filter, RV/RV±/RQ; 70/10/20 chronological split. **Deviations (disclosed):** sklearn NN (ReLU, no dropout; early stopping in dropout's place); regularised + trees fixed-window (HAR & NN match CSV); IV proxied by VIX; 100-point λ grid (resolution immaterial within range, but several selected penalties sit at a grid bound — see `outputs/tables/selected_lambda.csv`). 37 unit tests pass. One command: `python scripts/00_run_full_pipeline.py`.
